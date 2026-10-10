@@ -1,0 +1,91 @@
+{
+  "_doc": "greenroom registry. Families group hidden skills behind one visible gate. 'skills' starts empty: `sync` fills it by keyword matching and keeps it current. Move a skill between families by editing this file; the PostToolUse hook re-syncs. keep_visible: never hidden. pending: new skills with no clear family (left visible until you place them). manual=true means you wrote the gate's SKILL.md yourself; greenroom then only writes references/skills-added.md next to it.",
+  "notes": [
+    "Before spawning subagents or workflows, load any orchestration skill you have (e.g. symphony:orchestrating-subagents)."
+  ],
+  "families": [
+    {
+      "id": "motion",
+      "gate": "gate-motion",
+      "title": "Motion, animation, 3D, video",
+      "summary": "web animation, scroll storytelling, transitions, GSAP, Motion/Framer, three.js/R3F/WebGL/shaders, Lottie, Rive, Spline, embedded video, Remotion and programmatic video",
+      "keywords": ["animat", "motion", "gsap", "scroll", "transition", "framer", "three", "r3f", "webgl", "shader", "lottie", "rive", "spline", "remotion", "video", "keyframe", "spring", "easing", "3d"],
+      "detect": {"deps": ["framer-motion", "motion", "gsap", "@gsap/react", "three", "@react-three/fiber", "lenis", "lottie-web", "@lottiefiles/dotlottie-react", "@rive-app/react-canvas", "remotion"], "files": []},
+      "skills": []
+    },
+    {
+      "id": "design",
+      "gate": "gate-design",
+      "title": "UI and web design",
+      "summary": "visual direction, taste, layout, typography, color, design systems, tokens, components, redesign, polish, accessibility, responsive",
+      "keywords": ["design", "ui", "ux", "visual", "typograph", "color", "layout", "taste", "brand", "tailwind", "component", "accessib", "wcag", "a11y", "responsive", "figma", "mockup", "style"],
+      "detect": {"deps": ["tailwindcss", "@radix-ui/react-slot", "shadcn"], "files": ["DESIGN.md", "STYLEGUIDE.md", "components.json"]},
+      "skills": []
+    },
+    {
+      "id": "infra",
+      "gate": "gate-infra",
+      "title": "Infra, deploy and CI/CD",
+      "summary": "Cloudflare, Vercel, Docker, self-hosting, GitHub Actions, CI/CD pipelines, secrets, launches, monorepos, web performance",
+      "keywords": ["cloudflare", "worker", "wrangler", "vercel", "deploy", "ci/cd", "pipeline", "github actions", "docker", "kubernetes", "secrets", "durable object", "monorepo", "proxmox", "terraform"],
+      "detect": {"deps": ["wrangler", "@opennextjs/cloudflare", "@cloudflare/workers-types", "vercel"], "files": ["wrangler.toml", "wrangler.json", "wrangler.jsonc", "vercel.json", ".github/workflows", "Dockerfile", "turbo.json", "pnpm-workspace.yaml"]},
+      "skills": []
+    },
+    {
+      "id": "data",
+      "gate": "gate-data",
+      "title": "Databases",
+      "summary": "Postgres, Neon, Supabase, Prisma, Drizzle, SQLite/libsql, schema design, migrations, query optimization",
+      "keywords": ["database", "postgres", "sql", "sqlite", "prisma", "neon", "drizzle", "migration", "schema", "query", "orm", "supabase", "mongodb", "redis"],
+      "detect": {"deps": ["@neondatabase/serverless", "prisma", "@prisma/client", "pg", "postgres", "@libsql/client", "better-sqlite3", "drizzle-orm", "kysely", "@supabase/supabase-js", "mongoose"], "files": ["prisma/schema.prisma", "drizzle.config.ts", "migrations"]},
+      "skills": []
+    },
+    {
+      "id": "testing",
+      "gate": "gate-testing",
+      "title": "Testing and QA",
+      "summary": "Playwright, end-to-end, Vitest/Jest/Testing Library, pytest, flaky tests, real-browser testing, smoke tests",
+      "keywords": ["test", "playwright", "e2e", "vitest", "jest", "pytest", "cypress", "qa", "flaky", "smoke"],
+      "detect": {"deps": ["@playwright/test", "playwright", "vitest", "jest", "@testing-library/react", "cypress"], "files": ["playwright.config.ts", "playwright.config.js", "vitest.config.ts", "pytest.ini", "conftest.py"]},
+      "skills": []
+    },
+    {
+      "id": "backend",
+      "gate": "gate-backend",
+      "title": "Code, backend, languages and security",
+      "summary": "Node, Python, Rust, TypeScript, APIs and OpenAPI, WebSockets, auth, payments, error handling, observability, performance, React/Next patterns, security hardening",
+      "keywords": ["node", "python", "rust", "typescript", "javascript", "api", "backend", "server", "fastapi", "fastify", "express", "auth", "stripe", "websocket", "security", "react", "next.js", "nextjs", "performance", "logging", "observability"],
+      "detect": {"deps": ["fastify", "express", "hono", "stripe", "socket.io", "ws", "next", "react"], "files": ["pyproject.toml", "requirements.txt", "Cargo.toml", "tsconfig.json", "go.mod"]},
+      "skills": []
+    },
+    {
+      "id": "desktop",
+      "gate": "gate-desktop",
+      "title": "Desktop apps",
+      "summary": "Electron, electron-builder, code signing, auto-update, releases, Tauri",
+      "keywords": ["electron", "tauri", "desktop", "asar", "code signing", "notariz"],
+      "detect": {"deps": ["electron", "electron-builder", "@tauri-apps/api", "@tauri-apps/cli"], "files": ["electron-builder.yml", "src-tauri"]},
+      "skills": []
+    },
+    {
+      "id": "marketing",
+      "gate": "gate-marketing",
+      "title": "Marketing and SEO",
+      "summary": "marketing audits, copy, landing pages, funnels, email, ads, competitors, brand, launches, social, SEO",
+      "keywords": ["marketing", "seo", "copywrit", "landing page", "funnel", "campaign", "ads", "social media", "email sequence", "competitor", "brand voice"],
+      "detect": {"deps": [], "files": ["robots.txt", "public/robots.txt", "sitemap.xml"]},
+      "skills": []
+    },
+    {
+      "id": "process",
+      "gate": "gate-process",
+      "title": "Process, review and code quality",
+      "summary": "code review, simplification, debugging, git workflows, ADRs and docs, deprecations, planning, incremental delivery, prompts, agent context",
+      "keywords": ["code review", "review", "refactor", "simplif", "debug", "git", "commit", "adr", "documentation", "planning", "task breakdown", "incremental", "prompt", "context", "spec", "workflow", "agent"],
+      "detect": {"deps": [], "files": []},
+      "skills": []
+    }
+  ],
+  "keep_visible": [],
+  "pending": []
+}
