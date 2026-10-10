@@ -60,7 +60,7 @@ flowchart TD
 
 ### Las cinco piezas
 
-1. **Familias y puertas.** Las skills se agrupan en familias: motion, diseño, infra, datos, testing, backend, escritorio, marketing y proceso. Las podés editar. Cada familia tiene una **puerta**, una única skill visible (~300 caracteres de contexto) que elige las que hacen falta y lee su `SKILL.md` desde disco.
+1. **Familias y puertas.** Las skills se agrupan en familias: motion, diseño, infra, datos, testing, backend, escritorio, marketing, investigación y proceso. Las podés editar. Cada familia tiene una **puerta**, una única skill visible (~300 caracteres de contexto) que elige las que hacen falta y lee su `SKILL.md` desde disco.
 2. **Ocultas, nunca apagadas.** Las skills de cada familia quedan en `"user-invocable-only"`: no ocupan contexto y siguen en tu menú `/`. greenroom nunca escribe `"off"` y convierte el que encuentre.
 3. **Mapa al iniciar sesión.** Un hook `SessionStart` agrega ~1.500 caracteres al contexto:
    - qué hay oculto;
@@ -123,6 +123,8 @@ No toca tus skills.
 | `detect.deps`, `detect.files` | Señales de stack que ponen la puerta en "este repo usa…" |
 | `skills` | Las de la familia; se llena solo |
 | `manual` | `true` si la puerta la escribiste vos |
+
+`suggestions` hace que el mapa recomiende una skill cuando a un repo git le faltan ciertos archivos. El ejemplo apunta a [repo-baseline](https://github.com/PapiScholz/repo-baseline): si falta `README.md`, `ARCHITECTURE.md` o `docs/adr`, el modelo la sugiere una vez. En los repos que ya los tienen no suma ninguna línea.
 
 `notes` guarda líneas extra para el mapa, por ejemplo "las herramientas de Cloudflare llegan por el conector de claude.ai, no por el plugin" o "antes de lanzar subagentes, cargá la skill de orquestación".
 

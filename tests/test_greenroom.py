@@ -182,6 +182,21 @@ class TestHooks(Base):
         _, out = self.run_cli(["session"], {"cwd": str(repo)})
         self.assertIn("`gate-motion` (gsap)", json.loads(out)["hookSpecificOutput"]["additionalContext"])
 
+    def test_suggestion_only_in_git_repos_missing_the_files(self):
+        reg = self.registry()
+        reg["suggestions"] = [{"when_missing": ["README.md", "docs/adr"], "skill": "repo-baseline"}]
+        (self.tmp / "greenroom" / "registry.json").write_text(json.dumps(reg), encoding="utf-8")
+        repo = self.tmp / "r"
+        (repo / ".git").mkdir(parents=True)
+        ctx = lambda: json.loads(self.run_cli(["session"], {"cwd": str(repo)})[1])["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("missing README.md, docs/adr: suggest `repo-baseline`", ctx())
+        (repo / "README.md").write_text("x", encoding="utf-8")
+        (repo / "docs" / "adr").mkdir(parents=True)
+        self.assertNotIn("repo-baseline", ctx())
+        shutil.rmtree(repo / ".git")
+        (repo / "README.md").unlink()
+        self.assertNotIn("repo-baseline", ctx())  # not a git repo: no suggestion
+
     def test_posttool_only_reacts_to_install_commands(self):
         skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
         _, out = self.run_cli(["posttool"], {"tool_input": {"command": "npm test"}})

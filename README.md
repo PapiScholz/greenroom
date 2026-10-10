@@ -60,7 +60,7 @@ flowchart TD
 
 ### The five pieces
 
-1. **Families and gates.** Skills are grouped into families: motion, design, infra, data, testing, backend, desktop, marketing and process. You can edit them freely. Each family has one visible **gate** skill (~300 chars in context) that picks the members a task needs and reads their `SKILL.md` straight from disk.
+1. **Families and gates.** Skills are grouped into families: motion, design, infra, data, testing, backend, desktop, marketing, research and process. You can edit them freely. Each family has one visible **gate** skill (~300 chars in context) that picks the members a task needs and reads their `SKILL.md` straight from disk.
 2. **Hidden, never off.** Members get `skillOverrides: "user-invocable-only"`. That keeps them out of the model's context, but `/name` stays in your menu. greenroom never writes `"off"` and converts any it finds.
 3. **A map at session start.** A `SessionStart` hook injects ~1.5k chars into the context:
    - what is hidden;
@@ -123,6 +123,8 @@ Your skills are never touched.
 | `detect.deps`, `detect.files` | Stack signals that put the gate in "this repo uses…" |
 | `skills` | Members, filled in automatically |
 | `manual` | `true` if you wrote the gate yourself |
+
+`suggestions` makes the map recommend a skill when a git repo is missing some files. The example points at [repo-baseline](https://github.com/PapiScholz/repo-baseline): if `README.md`, `ARCHITECTURE.md` or `docs/adr` is missing, the model suggests it once. Repos that already have them get no extra line.
 
 `notes` holds extra lines for the session map, for example "Cloudflare tools come from the claude.ai connector, not the plugin" or "load the orchestration skill before spawning subagents".
 

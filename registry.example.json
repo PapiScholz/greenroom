@@ -77,6 +77,15 @@
       "skills": []
     },
     {
+      "id": "research",
+      "gate": "gate-research",
+      "title": "Research",
+      "summary": "researching a topic online, learning guides, refining ideas, adversarial review of conclusions, grounding decisions in official docs, searching past sessions, finding new skills",
+      "keywords": ["research", "investigat", "learn", "search", "sources", "citation", "literature", "web search", "fact-check", "idea", "evidence"],
+      "detect": {"deps": [], "files": []},
+      "skills": []
+    },
+    {
       "id": "process",
       "gate": "gate-process",
       "title": "Process, review and code quality",
@@ -84,6 +93,13 @@
       "keywords": ["code review", "review", "refactor", "simplif", "debug", "git", "commit", "adr", "documentation", "planning", "task breakdown", "incremental", "prompt", "context", "spec", "workflow", "agent"],
       "detect": {"deps": [], "files": []},
       "skills": []
+    }
+  ],
+  "suggestions": [
+    {
+      "_doc": "Example: in a git repo missing these files, the map suggests a docs-baseline skill (github.com/PapiScholz/repo-baseline). Point 'skill' at whatever you have installed; delete the entry if you don't use it.",
+      "when_missing": ["README.md", "ARCHITECTURE.md", "docs/adr"],
+      "skill": "repo-baseline"
     }
   ],
   "keep_visible": [],

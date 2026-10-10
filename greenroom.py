@@ -339,6 +339,19 @@ def detect(cwd: Path) -> set:
     return deps
 
 
+def suggestions(cwd: Path, reg: dict) -> list:
+    """Registry 'suggestions': in a git repo missing some files, suggest a skill (e.g. a docs-baseline skill)."""
+    if not (cwd / ".git").exists():
+        return []
+    out = []
+    for sug in reg.get("suggestions", []):
+        missing = [f for f in sug.get("when_missing", []) if not (cwd / f).exists()]
+        if missing:
+            template = sug.get("text") or "This repo is missing {missing}: suggest `{skill}` to the user once, without insisting."
+            out.append(template.format(missing=", ".join(missing), skill=sug.get("skill", "?")))
+    return out
+
+
 def session_text(cwd: Path, sync_notes: list) -> str:
     reg = load_registry()
     inv = inventory()
@@ -361,6 +374,7 @@ def session_text(cwd: Path, sync_notes: list) -> str:
             relevant.append(f"`{fam['gate']}` ({', '.join(hit[:4])})")
     if relevant:
         lines.append(f"This repo ({cwd.name}) uses: " + ", ".join(relevant) + ". Enter those gates when the task touches them.")
+    lines.extend(suggestions(cwd, reg))
     news = [n for n in sync_notes if n.startswith(("new", "removed", "ERROR"))]
     if news:
         lines.append("Automatic maintenance at this start: " + "; ".join(news) + ". Tell the user in one line.")
