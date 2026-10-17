@@ -3,3 +3,14 @@ __pycache__/
 .venv/
 .DS_Store
 graphify-out/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

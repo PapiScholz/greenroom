@@ -143,6 +143,13 @@ python -m unittest discover tests
 
 Every test runs in a throwaway `CLAUDE_CONFIG_DIR`. Mutations were checked: writing `"off"`, disabling classification or matching every command each turn tests red.
 
+## Documentation
+
+- [Architecture](ARCHITECTURE.md)
+- [Decisions (ADRs)](docs/adr/)
+- [Security](SECURITY.md)
+- Design: does not apply. greenroom is a CLI and a pair of hooks with no UI, so there is no `DESIGN.md`.
+
 ## License
 
-MIT
+[MIT](LICENSE)

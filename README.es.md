@@ -143,6 +143,15 @@ python -m unittest discover tests
 
 Cada test corre en un `CLAUDE_CONFIG_DIR` descartable. Se verificó con mutaciones: escribir `"off"`, desactivar la clasificación o reaccionar a cualquier comando ponen los tests en rojo.
 
+## Documentación
+
+- [Arquitectura](ARCHITECTURE.md)
+- [Decisiones (ADRs)](docs/adr/)
+- [Seguridad](SECURITY.md)
+- Diseño: no aplica. greenroom es una CLI con dos hooks, sin interfaz, así que no hay `DESIGN.md`.
+
+Estos documentos están en inglés.
+
 ## Licencia
 
-MIT
+[MIT](LICENSE)
