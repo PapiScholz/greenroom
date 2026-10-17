@@ -54,6 +54,7 @@ greenroom/
 ├── registry.example.json   # default families
 ├── tests/test_greenroom.py
 ├── docs/adr/               # architecture decisions
+├── assets/                 # logo, wordmarks, social preview
 ├── README.md / README.es.md
 └── LICENSE                 # MIT
 ```

@@ -1,4 +1,9 @@
-# greenroom
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-wordmark-dark.svg">
+    <img alt="greenroom" src="assets/logo-wordmark-light.svg" width="420">
+  </picture>
+</h1>
 
 **Keep hundreds of Claude Code skills off the context window without ever losing them.**
 
