@@ -10,7 +10,7 @@ Do not open public issues for vulnerabilities.
 
 ## What greenroom touches
 
-greenroom runs locally with the user's permissions. It makes no network requests and handles no personal data.
+greenroom runs locally with the user's permissions. It makes no network requests and stores no prompt or message text.
 
 | Data | Classification | Where it lives | Who accesses it |
 |---|---|---|---|
@@ -19,6 +19,8 @@ greenroom runs locally with the user's permissions. It makes no network requests
 | Skill frontmatter (`name`, `description`) | Public metadata | `<claude dir>/skills/*/SKILL.md` | Read only |
 | Generated gates | Generated Markdown | `<claude dir>/skills/<gate>/` | Written by `sync`, deleted by `--uninstall` |
 | Hook payload (`cwd`, `tool_input.command`) | Session metadata | stdin, never stored | Read only, used to decide whether to sync |
+| `prompts.jsonl` (time, session id, cwd, gates and keywords matched) | Usage metadata | `<claude dir>/greenroom/prompts.jsonl`, appended by the `UserPromptSubmit` hook | greenroom only; the prompt is read from stdin to match keywords and **its text is never written**. Delete the file to clear the log |
+| Claude Code transcripts | Session history (may contain anything the user typed) | `<claude dir>/projects/**/*.jsonl` | Read only by `usage`, on demand; nothing from them is written anywhere |
 
 Security-relevant behavior:
 

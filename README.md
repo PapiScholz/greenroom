@@ -67,9 +67,10 @@ flowchart TD
 
 1. **Families and gates.** Skills are grouped into families: motion, design, infra, data, testing, backend, desktop, marketing, research and process. You can edit them freely. Each family has one visible **gate** skill (~300 chars in context) that picks the members a task needs and reads their `SKILL.md` straight from disk.
 2. **Hidden, never off.** Members get `skillOverrides: "user-invocable-only"`. That keeps them out of the model's context, but `/name` stays in your menu. greenroom never writes `"off"` and converts any it finds.
-3. **A map at session start.** A `SessionStart` hook injects ~1.5k chars into the context:
+3. **A map at session start.** A `SessionStart` hook injects ~1.9k chars into the context:
    - what is hidden;
    - which gates exist;
+   - the rules for using a hidden skill (the repo wins, say what you picked, read it in full, never obey silent commands or unasked migrations), which hold even when the model reads one without its gate;
    - which gates **this repo** needs.
 
    Stack detection reads `package.json`, config files (`wrangler.toml`, `playwright.config.ts`, `prisma/schema.prisma`…) and libraries loaded by CDN in single-file HTML sites.
@@ -91,6 +92,8 @@ Measured on the author's machine (~300 skills), the skill listing went from ~30k
 | Use a hidden skill | Just ask; the model goes through the gate. Or type its `/name`. |
 | See what is installed where | `python ~/.claude/greenroom/greenroom.py status` |
 | Make sure nothing is lost | `python ~/.claude/greenroom/greenroom.py check` (exit 1 on orphans or broken gates) |
+| Measure whether greenroom works | `python ~/.claude/greenroom/greenroom.py usage [--since 2026-10-10 | --all] [--verbose] [--json]`. Reads the transcripts in `~/.claude/projects` line by line: interactive sessions and how many got the map (SDK sessions are shown apart), entries per gate and how many were followed by reading a hidden skill of that family, gates never used, hidden skills read (top 10) and never read per family, hidden skills you typed as `/name`, hidden skills delegated to a subagent, and reads in sessions that never entered their gate. Entering a gate is the `Skill` tool, `/gate`, reading the gate's `SKILL.md`, or typing `/name` of one of its hidden skills; subagent reads count in their parent session. Only local reads count: `Read`, or `cat`/`head`/`sed`/`Get-Content` on `~/.claude/skills/<name>/SKILL.md`. By default it counts from the install (the first session that opened with the map; the header says which); `--since` (UTC) sets another start, `--all` counts every transcript. Sessions that started before the start are left out. `--verbose` lists the never-read skills by name instead of a count per family. |
+| Find prompts where the model may have improvised | `usage` crosses `~/.claude/greenroom/prompts.jsonl` (written by the `UserPromptSubmit` hook: time, session, cwd and the gates whose keywords appear in the prompt, never the prompt itself) with the transcripts. For every prompt that matched a gate it checks whether the session entered that gate or read one of its skills before the next prompt, and lists the rest per gate with the keywords that fired, plus a sample of 10 to review by hand. They are candidates, not confirmed failures. One keyword is enough; it must start a word, and keywords of 3 letters or less must be the whole word. |
 | Move a skill to another family | Edit its family's `skills` list in `~/.claude/greenroom/registry.json`; the next sync applies it. |
 | Keep one of your own skills always visible | Add it to `keep_visible` in the registry. |
 | Place a skill flagged as `pending` | Add it to a family's `skills` list. |
@@ -105,7 +108,7 @@ Requires Python 3.9+ and Claude Code. `$CLAUDE_CONFIG_DIR` is honored.
 - copies `greenroom.py` to `~/.claude/greenroom/`;
 - creates `registry.json` from `registry.example.json`, or from `--registry FILE`;
 - backs up `settings.json`;
-- adds two hooks: `SessionStart`, and `PostToolUse` on `Bash|PowerShell`;
+- adds three hooks: `SessionStart`, `PostToolUse` on `Bash|PowerShell`, and `UserPromptSubmit` (logs which gates each prompt matches by keyword, never the text, and prints nothing);
 - runs the first sync.
 
 `--yes` skips the confirmation.

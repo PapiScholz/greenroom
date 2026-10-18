@@ -49,10 +49,14 @@ def add_hooks(settings: dict) -> None:
     pt = hooks.setdefault("PostToolUse", [])
     if not has_hook(pt, "greenroom.py"):
         pt.append({"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": hook_cmd("posttool"), "timeout": 30}]})
+    # Logs which gates each prompt matches (never the text) so `usage` can find possible improvisations. Prints nothing.
+    up = hooks.setdefault("UserPromptSubmit", [])
+    if not has_hook(up, "greenroom.py"):
+        up.append({"hooks": [{"type": "command", "command": hook_cmd("prompt"), "timeout": 5}]})
 
 
 def remove_hooks(settings: dict) -> None:
-    for event in ("SessionStart", "PostToolUse"):
+    for event in ("SessionStart", "PostToolUse", "UserPromptSubmit"):
         groups = settings.get("hooks", {}).get(event, [])
         kept = []
         for g in groups:

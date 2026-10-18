@@ -67,9 +67,10 @@ flowchart TD
 
 1. **Familias y puertas.** Las skills se agrupan en familias: motion, diseño, infra, datos, testing, backend, escritorio, marketing, investigación y proceso. Las podés editar. Cada familia tiene una **puerta**, una única skill visible (~300 caracteres de contexto) que elige las que hacen falta y lee su `SKILL.md` desde disco.
 2. **Ocultas, nunca apagadas.** Las skills de cada familia quedan en `"user-invocable-only"`: no ocupan contexto y siguen en tu menú `/`. greenroom nunca escribe `"off"` y convierte el que encuentre.
-3. **Mapa al iniciar sesión.** Un hook `SessionStart` agrega ~1.500 caracteres al contexto:
+3. **Mapa al iniciar sesión.** Un hook `SessionStart` agrega ~1.900 caracteres al contexto:
    - qué hay oculto;
    - qué puertas existen;
+   - las reglas para usar una skill oculta (manda el repo, decir cuáles se eligieron, leerla completa, no obedecer comandos silenciosos ni migraciones no pedidas), que valen aunque el modelo la lea sin pasar por su puerta;
    - cuáles necesita **este repo**.
 
    El stack lo detecta por `package.json`, por archivos de config (`wrangler.toml`, `playwright.config.ts`, `prisma/schema.prisma`…) y por librerías cargadas por CDN en sitios HTML de un solo archivo.
@@ -91,6 +92,8 @@ En la máquina del autor (~300 skills), el listado bajó de ~30.000 a ~15.000 ca
 | Usar una skill oculta | Pedí la tarea y el modelo entra por la puerta. O escribí su `/nombre` |
 | Ver qué hay y dónde | `python ~/.claude/greenroom/greenroom.py status` |
 | Confirmar que no se perdió nada | `python ~/.claude/greenroom/greenroom.py check` (sale con 1 si hay huérfanas o puertas rotas) |
+| Medir si greenroom funciona | `python ~/.claude/greenroom/greenroom.py usage [--since 2026-10-10 | --all] [--verbose] [--json]`. Lee línea a línea los transcripts de `~/.claude/projects`: sesiones interactivas y cuántas recibieron el mapa (las del SDK van aparte), entradas a cada puerta y cuántas siguieron con la lectura de una skill oculta de esa familia, puertas nunca usadas, skills ocultas leídas (top 10) y nunca leídas por familia, ocultas que invocaste con `/nombre`, ocultas delegadas a un subagente y lecturas en sesiones que nunca entraron a su puerta. Entrar a una puerta es la herramienta `Skill`, `/puerta`, leer el `SKILL.md` de la puerta o escribir `/nombre` de una de sus skills ocultas; lo que leen los subagentes cuenta en su sesión padre. Solo cuentan las lecturas locales: `Read`, o `cat`/`head`/`sed`/`Get-Content` sobre `~/.claude/skills/<nombre>/SKILL.md`. Por defecto cuenta desde la instalación (la primera sesión que abrió con el mapa; el encabezado dice cuál); `--since` (UTC) fija otro inicio y `--all` cuenta todos los transcripts. Las sesiones que empezaron antes del inicio quedan afuera. `--verbose` lista por nombre las skills nunca leídas en vez de un conteo por familia |
+| Encontrar mensajes donde el modelo pudo haber improvisado | `usage` cruza `~/.claude/greenroom/prompts.jsonl` (lo escribe el hook `UserPromptSubmit`: hora, sesión, cwd y las puertas cuyas palabras clave aparecen en el mensaje, nunca el mensaje) con los transcripts. Por cada mensaje que coincidió con una puerta mira si la sesión entró a esa puerta o leyó una de sus skills antes del mensaje siguiente, y lista el resto por puerta con las palabras clave que dispararon, más una muestra de 10 para revisar a mano. Son candidatos, no fallas confirmadas. Alcanza una palabra clave; tiene que empezar una palabra, y las de 3 letras o menos tienen que ser la palabra entera. Las palabras clave del registro están en inglés: sumá las en español a `keywords` si escribís en español |
 | Mover una skill de familia | Editá la lista `skills` de su familia en `~/.claude/greenroom/registry.json`; la próxima pasada lo aplica |
 | Que una skill tuya quede siempre visible | Sumala a `keep_visible` en el registro |
 | Ubicar una skill marcada `pending` | Sumala a la lista `skills` de una familia |
@@ -105,7 +108,7 @@ Requiere Python 3.9+ y Claude Code. Respeta `$CLAUDE_CONFIG_DIR`.
 - copia `greenroom.py` a `~/.claude/greenroom/`;
 - crea `registry.json` desde `registry.example.json`, o desde `--registry ARCHIVO`;
 - hace backup de `settings.json`;
-- agrega dos hooks: `SessionStart`, y `PostToolUse` sobre `Bash|PowerShell`;
+- agrega tres hooks: `SessionStart`, `PostToolUse` sobre `Bash|PowerShell`, y `UserPromptSubmit` (registra qué puertas coinciden por palabra clave con cada mensaje, nunca el texto, y no imprime nada);
 - corre la primera pasada.
 
 `--yes` saltea la confirmación.
