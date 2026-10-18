@@ -27,6 +27,8 @@ Pending skills are hidden like any family member, behind a generated gate (`gate
 
 Against the same 254 skills: 158 land in their current family (161 with substrings), 70 go to pending (62) and 26 to another family (31). A skill in the wrong gate is harder to find than one behind `gate-other`, so more pending and fewer wrong is the better side of the trade. Most of the remaining errors come from keywords that several families share (`design`, `agent`, `workflow`), which is tuning in `registry.json`, not the matcher.
 
+A skill stays in exactly one family. Listing it in two gates when the race is close was measured on 2026-10-18 against the same 254 skills (keywords tuned since: 171 same, 71 pending, 12 wrong): errors fell from 12 to 6, but 77 skills would sit in two or more gates (25 in three or more), 105 extra gate rows, and `usage` attributes each skill to one gate. Instead the sync note flags the close race (`new -> design (close: motion): x`): 70 of the 183 classified skills would carry the note, among them 7 of the 12 wrong ones. The remaining errors are placement choices the keywords cannot express (a design skill kept in the motion family), fixed by moving the skill by hand.
+
 No skill is ever unreachable: a pending skill is still in the user's `/` menu, `gate-other` lists it, and `check` counts it as covered. The map asks the model to suggest a family for each pending skill once.
 
 Supersedes the "unclear skills stay visible" consequence of ADR-0001.

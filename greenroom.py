@@ -171,9 +171,10 @@ def count_keywords(keywords: list, text: str) -> int:
     return sum(1 for k in keywords if re.search(keyword_pattern(k), text))
 
 
-def classify(fm: dict, reg: dict):
-    """Family id by keyword hits in name + description: at least 2 hits and a clear winner. A tie goes to the
-    family with more hits in the name (frontmatter name + folder); still tied, None."""
+def classify_detail(fm: dict, reg: dict) -> tuple:
+    """(family id, close) by keyword hits in name + description: at least 2 hits and a clear winner. A tie goes to
+    the family with more hits in the name (frontmatter name + folder); still tied, (None, []). `close` lists the
+    other families within 1 hit of the winner: the race was close, so the user may want to check the choice."""
     folder = fm["path"].parent.name if fm.get("path") else ""
     name = f"{fm['name']} {folder}".lower()
     text = f"{name} {fm['desc']}".lower()
@@ -181,11 +182,18 @@ def classify(fm: dict, reg: dict):
               for fam in reg["families"]]
     top = max((s[0] for s in scores), default=0)
     if top < 2:
-        return None
+        return None, []
     tied = [s for s in scores if s[0] == top]
     best = max(s[1] for s in tied)
     winners = [s[2] for s in tied if s[1] == best]
-    return winners[0] if len(winners) == 1 else None
+    if len(winners) != 1:
+        return None, []
+    return winners[0], [s[2] for s in scores if s[0] >= top - 1 and s[2] != winners[0]]
+
+
+def classify(fm: dict, reg: dict):
+    """Family id for a skill, or None when no family clearly claims it. See classify_detail()."""
+    return classify_detail(fm, reg)[0]
 
 
 # ---------------------------------------------------------------- gates
@@ -328,10 +336,11 @@ def sync() -> list:
     for d, fm in inv.items():
         if d in known or d in reg["pending"]:
             continue
-        fid = classify(fm, reg)
+        fid, close = classify_detail(fm, reg)
         if fid:
             next(f for f in reg["families"] if f["id"] == fid)["skills"].append(d)
-            notes.append(f"new -> {fid}: {d}")
+            race = f" (close: {', '.join(close)})" if close else ""
+            notes.append(f"new -> {fid}{race}: {d}")
         elif fm["dmi"]:
             continue  # slash-only: costs no context, so it needs no gate
         else:

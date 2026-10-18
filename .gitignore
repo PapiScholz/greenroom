@@ -14,3 +14,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Session handoff (handoff-ledger): personal, not committed
+HANDOFF.md

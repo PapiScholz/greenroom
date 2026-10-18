@@ -133,6 +133,18 @@ class TestSync(Base):
         gr.sync()
         self.assertEqual(self.overrides().get("Pretty Name"), "user-invocable-only")
 
+    def test_close_race_is_flagged_in_the_sync_note(self):
+        # motion: gsap, scroll, animat = 3; design: ui, layout = 2
+        skill(self.tmp, "gsap-ui", "GSAP scroll animations for ui layout.")
+        notes = gr.sync()
+        self.assertIn("new -> motion (close: design): gsap-ui", notes)
+        self.assertIn("gsap-ui", self.family("motion")["skills"])
+        self.assertNotIn("gsap-ui", self.family("design")["skills"])
+
+    def test_clear_win_has_no_close_note(self):
+        skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
+        self.assertIn("new -> motion: gsap-scroll", gr.sync())
+
     def test_sync_is_idempotent(self):
         skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
         gr.sync()
@@ -164,6 +176,24 @@ class TestClassify(unittest.TestCase):
 
     def test_single_hit_is_not_enough(self):
         self.assertIsNone(self.classify("kit", "Uses GSAP."))
+
+    def detail(self, folder, desc):
+        return gr.classify_detail({"name": folder, "desc": desc, "path": Path(folder) / "SKILL.md"}, self.REG)
+
+    def test_detail_names_the_runner_up_when_it_trails_by_one(self):
+        # a: gsap, scroll, animat = 3; b: react, hooks = 2
+        self.assertEqual(self.detail("x", "GSAP scroll animations for React hooks."), ("a", ["b"]))
+
+    def test_detail_names_the_loser_of_a_tie_broken_by_the_name(self):
+        self.assertEqual(self.detail("gsap-scroll-kit", "Use with React hooks."), ("a", ["b"]))
+
+    def test_detail_has_no_runner_up_when_the_winner_leads_by_two_or_more(self):
+        self.assertEqual(self.detail("x", "GSAP scroll animations with easing."), ("a", []))
+        self.assertEqual(self.detail("x", "GSAP scroll animations with easing. React."), ("a", []))
+
+    def test_detail_of_an_unclassified_skill_is_none_and_empty(self):
+        self.assertEqual(self.detail("kit", "Uses GSAP."), (None, []))
+        self.assertEqual(self.detail("kit", "GSAP scroll with React hooks."), (None, []))
 
 
 class TestManualGate(Base):

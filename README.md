@@ -127,7 +127,7 @@ Your skills are never touched.
 | Field | Meaning |
 |---|---|
 | `id`, `gate`, `title`, `summary` | Identity of the family and the name and description of its gate |
-| `keywords` | Used to classify new skills. A keyword must start a word, and one of 3 letters or less must be the whole word. A skill needs at least 2 hits and a clear winner. On a tie, the family with more hits in the skill's name wins. Otherwise the skill goes to `pending`. |
+| `keywords` | Used to classify new skills. A keyword must start a word, and one of 3 letters or less must be the whole word. A skill needs at least 2 hits and a clear winner. On a tie, the family with more hits in the skill's name wins. Otherwise the skill goes to `pending`. When another family trails the winner by one hit or less, the sync note says so (`new -> design (close: motion): x`) so the user can check the choice. |
 | `detect.deps`, `detect.files` | Stack signals that put the gate in "this repo uses…" |
 | `skills` | Members, filled in automatically |
 | `manual` | `true` if you wrote the gate yourself |
