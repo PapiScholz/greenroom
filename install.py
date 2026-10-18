@@ -7,7 +7,7 @@
   python install.py --registry FILE    start from your own registry instead of registry.example.json
   python install.py --uninstall        remove hooks, restore every override greenroom changed, delete generated gates
 
-The claude dir is $CLAUDE_CONFIG_DIR or ~/.claude. settings.json is backed up before every write.
+The claude dir is $CLAUDE_CONFIG_DIR or ~/.claude. settings.json is backed up whenever a run changes it.
 """
 from __future__ import annotations
 
@@ -28,13 +28,23 @@ def hook_cmd(sub: str) -> str:
     return f'"{sys.executable}" -X utf8 "{script}" {sub}'
 
 
-def backup_settings() -> Path | None:
+def settings_snapshot() -> str | None:
+    """The text of settings.json before a run, or None when the file does not exist."""
     s = gr.paths()["settings"]
-    if not s.is_file():
-        return None
+    return s.read_text(encoding="utf-8") if s.is_file() else None
+
+
+def backup_settings(before: str | None) -> str:
+    """Write the pre-run text to settings.json.bak-<stamp>-greenroom, only if the run changed the file: a no-op
+    reinstall leaves no backup behind. Returns the line to print."""
+    s = gr.paths()["settings"]
+    if before is None:
+        return "settings.json created"
+    if s.read_text(encoding="utf-8") == before:
+        return "settings unchanged, no backup"
     dst = s.with_name(f"settings.json.bak-{time.strftime('%Y%m%d-%H%M%S')}-greenroom")
-    shutil.copy2(s, dst)
-    return dst
+    dst.write_text(before, encoding="utf-8", newline="")
+    return f"settings backup: {dst}"
 
 
 def has_hook(groups: list, marker: str) -> bool:
@@ -102,13 +112,13 @@ def install(args) -> int:
         shutil.copy2(src_reg, p["registry"])
         print(f"registry created from {src_reg}")
     shutil.copy2(HERE / "greenroom.py", p["data"] / "greenroom.py")
-    b = backup_settings()
+    before = settings_snapshot()
     settings = gr.read_json(p["settings"], {})
     add_hooks(settings)
     gr.write_json(p["settings"], settings)
     notes = gr.sync()
     problems, orphans = gr.check()
-    print(f"settings backup: {b}" if b else "settings.json created")
+    print(backup_settings(before))
     print(f"{len(notes)} changes; check: {'OK' if not (problems or orphans) else 'FAIL'}")
     for x in problems + [f"orphan: {o}" for o in orphans]:
         print("  ", x)
@@ -118,7 +128,7 @@ def install(args) -> int:
 
 def uninstall() -> int:
     p = gr.paths()
-    b = backup_settings()
+    before = settings_snapshot()
     settings = gr.read_json(p["settings"], {})
     remove_hooks(settings)
     state = gr.read_json(p["state"], {"managed_overrides": {}})
@@ -138,7 +148,7 @@ def uninstall() -> int:
                 removed.append(d.name)
     gr.write_json(p["state"], {"managed_overrides": {}})
     print(f"hooks removed, {len(state.get('managed_overrides', {}))} overrides restored, generated gates deleted: {', '.join(removed) or 'none'}")
-    print(f"settings backup: {b}; registry kept at {p['registry']}")
+    print(f"{backup_settings(before)}; registry kept at {p['registry']}")
     return 0
 
 

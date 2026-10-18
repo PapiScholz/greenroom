@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -589,6 +590,35 @@ class TestUninstall(Base):
         install.remove_hooks(settings)
         self.assertNotIn("greenroom.py", json.dumps(settings))
         self.assertEqual(settings["hooks"]["UserPromptSubmit"], [foreign])
+
+
+class TestInstallBackup(Base):
+    def run_install(self):
+        import argparse
+        args = argparse.Namespace(registry=None, dry_run=False, yes=True)
+        with redirect_stdout(io.StringIO()) as out:
+            install.install(args)
+        return out.getvalue()
+
+    def backups(self):
+        return sorted(self.tmp.glob("settings.json.bak-*"))
+
+    def test_first_install_backs_up_settings_and_a_no_op_reinstall_does_not(self):
+        skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
+        self.run_install()
+        self.assertEqual(len(self.backups()), 1)
+        self.assertEqual(json.loads(self.backups()[0].read_text(encoding="utf-8")), {"skillOverrides": {}})  # pre-write content
+        time.sleep(1.1)  # the backup name has second resolution
+        out = self.run_install()
+        self.assertEqual(len(self.backups()), 1)
+        self.assertIn("settings unchanged, no backup", out)
+
+    def test_reinstall_that_changes_settings_backs_up_again(self):
+        self.run_install()
+        time.sleep(1.1)
+        skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
+        self.run_install()
+        self.assertEqual(len(self.backups()), 2)
 
 
 if __name__ == "__main__":
