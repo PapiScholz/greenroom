@@ -49,7 +49,7 @@ flowchart TD
     O["Abrís una sesión de Claude Code"] -->|hook SessionStart| S
     S["greenroom sync"] --> N{"¿Qué cambió?"}
     N -->|"skill nueva, familia clara"| H["La suma a su familia<br/>y la oculta: user-invocable-only<br/>(sigue en tu menú /)"]
-    N -->|"skill nueva, sin familia clara"| P["La deja visible<br/>como pending"]
+    N -->|"skill nueva, sin familia clara"| P["La oculta detrás de gate-other<br/>como pending"]
     N -->|"skill borrada"| R["La saca del registro"]
     N -->|nada| K
     H --> G["Regenera la puerta de esa familia"]
@@ -74,7 +74,7 @@ flowchart TD
    - cuáles necesita **este repo**.
 
    El stack lo detecta por `package.json`, por archivos de config (`wrangler.toml`, `playwright.config.ts`, `prisma/schema.prisma`…) y por librerías cargadas por CDN en sitios HTML de un solo archivo.
-4. **Mantenimiento cero.** greenroom sincroniza al iniciar cada sesión y justo después de cada `skills add/remove` o `plugin install/uninstall`. En cada pasada clasifica las skills nuevas por palabras clave, las oculta, las suma a su puerta y poda las borradas. Si una skill no tiene familia clara, queda visible y el mapa la marca.
+4. **Mantenimiento cero.** greenroom sincroniza al iniciar cada sesión y justo después de cada `skills add/remove` o `plugin install/uninstall`. En cada pasada clasifica las skills nuevas por palabras clave, las oculta, las suma a su puerta y poda las borradas. Si una skill no tiene familia clara, queda oculta detrás de `gate-other` y el mapa la marca.
 5. **Cero huérfanas.** `check` falla si:
    - alguna skill oculta no tiene puerta;
    - una puerta está oculta;
@@ -95,7 +95,7 @@ En la máquina del autor (~300 skills), el listado bajó de ~30.000 a ~15.000 ca
 | Medir si greenroom funciona | `python ~/.claude/greenroom/greenroom.py usage [--since 2026-10-10 | --all] [--verbose] [--json]`. Lee línea a línea los transcripts de `~/.claude/projects`: sesiones interactivas y cuántas recibieron el mapa (las del SDK van aparte), entradas a cada puerta y cuántas siguieron con la lectura de una skill oculta de esa familia, puertas nunca usadas, skills ocultas leídas (top 10) y nunca leídas por familia, ocultas que invocaste con `/nombre`, ocultas delegadas a un subagente y lecturas en sesiones que nunca entraron a su puerta. Entrar a una puerta es la herramienta `Skill`, `/puerta`, leer el `SKILL.md` de la puerta o escribir `/nombre` de una de sus skills ocultas; lo que leen los subagentes cuenta en su sesión padre. Solo cuentan las lecturas locales: `Read`, o `cat`/`head`/`sed`/`Get-Content` sobre `~/.claude/skills/<nombre>/SKILL.md`. Por defecto cuenta desde la instalación (la primera sesión que abrió con el mapa; el encabezado dice cuál); `--since` (UTC) fija otro inicio y `--all` cuenta todos los transcripts. Las sesiones que empezaron antes del inicio quedan afuera. `--verbose` lista por nombre las skills nunca leídas en vez de un conteo por familia |
 | Encontrar mensajes donde el modelo pudo haber improvisado | `usage` cruza `~/.claude/greenroom/prompts.jsonl` (lo escribe el hook `UserPromptSubmit`: hora, sesión, cwd y las puertas cuyas palabras clave aparecen en el mensaje, nunca el mensaje) con los transcripts. Por cada mensaje que coincidió con una puerta mira si la sesión entró a esa puerta o leyó una de sus skills antes del mensaje siguiente, y lista el resto por puerta con las palabras clave que dispararon, más una muestra de 10 para revisar a mano. Son candidatos, no fallas confirmadas. Alcanza una palabra clave; tiene que empezar una palabra, y las de 3 letras o menos tienen que ser la palabra entera. Las palabras clave del registro están en inglés: sumá las en español a `keywords` si escribís en español |
 | Mover una skill de familia | Editá la lista `skills` de su familia en `~/.claude/greenroom/registry.json`; la próxima pasada lo aplica |
-| Que una skill tuya quede siempre visible | Sumala a `keep_visible` en el registro |
+| Que una skill tuya quede siempre visible | Sumala a `keep_visible` en el registro. Si además está en una familia y el modelo puede invocarla, `status` y el mapa de sesión avisan que cuesta contexto dos veces |
 | Ubicar una skill marcada `pending` | Sumala a la lista `skills` de una familia |
 | Escribir una puerta a mano | Poné `"manual": true` en la familia. greenroom deja de pisar su `SKILL.md` y escribe al lado `references/skills-added.md` con las que tu texto todavía no menciona |
 | Deshacer todo | `python install.py --uninstall` |
@@ -127,19 +127,21 @@ No toca tus skills.
 | Campo | Qué es |
 |---|---|
 | `id`, `gate`, `title`, `summary` | Identidad de la familia, y nombre y descripción de su puerta |
-| `keywords` | Sirven para clasificar las skills nuevas: hacen falta 2 coincidencias y un ganador claro, si no queda `pending` |
+| `keywords` | Sirven para clasificar las skills nuevas. Cada palabra clave tiene que empezar una palabra, y las de 3 letras o menos tienen que ser la palabra completa. Hacen falta 2 coincidencias y un ganador claro. En un empate gana la familia con más coincidencias en el nombre de la skill. Si no, queda `pending` |
 | `detect.deps`, `detect.files` | Señales de stack que ponen la puerta en "este repo usa…" |
 | `skills` | Las de la familia; se llena solo |
 | `manual` | `true` si la puerta la escribiste vos |
 
 `suggestions` hace que el mapa recomiende una skill cuando a un repo git le faltan ciertos archivos. El ejemplo apunta a [repo-baseline](https://github.com/PapiScholz/repo-baseline): si falta `README.md`, `ARCHITECTURE.md` o `docs/adr`, el modelo la sugiere una vez. En los repos que ya los tienen no suma ninguna línea.
 
+`pending_gate` es el nombre de la puerta para las skills sin familia (por defecto `gate-other`). Sólo existe mientras haya alguna pendiente.
+
 `notes` guarda líneas extra para el mapa, por ejemplo "las herramientas de Cloudflare llegan por el conector de claude.ai, no por el plugin" o "antes de lanzar subagentes, cargá la skill de orquestación".
 
 ## Límites
 
 - **Las skills de plugins** no se ocultan con `skillOverrides`: se manejan con `/plugin`, y por proyecto si hace falta (`enabledPlugins` en `<repo>/.claude/settings.json`). Una puerta igual puede leer el `SKILL.md` de un plugin deshabilitado desde la caché.
-- **La clasificación** usa palabras clave y es conservadora a propósito: ante la duda, la skill queda visible.
+- **La clasificación** usa palabras clave y es conservadora a propósito: ante la duda, la skill va a `gate-other` en vez de a una familia que puede ser la equivocada ([ADR-0002](docs/adr/0002-whole-word-classification-and-a-gate-for-pending.md)).
 - **`settings.json` se reescribe** como JSON con sangría de 2. El contenido se conserva; el formato puede cambiar.
 - **Las skills de proyecto** (`<repo>/.claude/skills`) no se clasifican. Los overrides aplican por nombre: ocultar una skill de usuario oculta también una de proyecto con el mismo nombre.
 

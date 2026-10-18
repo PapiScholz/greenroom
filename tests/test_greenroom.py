@@ -97,11 +97,31 @@ class TestSync(Base):
         self.assertNotIn("vitest-patterns", self.family("testing")["skills"])
         self.assertTrue(any(n.startswith("removed from testing") for n in notes))
 
-    def test_ambiguous_skill_goes_to_pending_and_stays_visible(self):
+    def test_ambiguous_skill_goes_to_pending_hidden_behind_the_other_gate(self):
+        skill(self.tmp, "weather", "Tells the weather forecast.")
+        notes = gr.sync()
+        self.assertEqual(self.registry()["pending"], ["weather"])  # the other gate itself is never classified
+        self.assertEqual(self.overrides()["weather"], "user-invocable-only")
+        gate = (self.tmp / "skills" / "gate-other" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`weather`", gate)
+        self.assertNotIn("gate-other", self.overrides())
+        self.assertEqual(gr.check(), ([], []))
+        self.assertIn("`gate-other`", gr.session_text(self.tmp, notes))
+        self.assertEqual(gr.sync(), [])
+
+    def test_slash_only_skill_with_no_family_is_not_pending(self):
+        skill(self.tmp, "weather", "Tells the weather forecast.", dmi=True)
+        gr.sync()
+        self.assertEqual(self.registry()["pending"], [])
+        self.assertFalse((self.tmp / "skills" / "gate-other").exists())
+
+    def test_other_gate_is_deleted_when_nothing_is_pending(self):
         skill(self.tmp, "weather", "Tells the weather forecast.")
         gr.sync()
-        self.assertIn("weather", self.registry()["pending"])
-        self.assertNotIn("weather", self.overrides())
+        shutil.rmtree(self.tmp / "skills" / "weather")
+        gr.sync()
+        self.assertFalse((self.tmp / "skills" / "gate-other").exists())
+        self.assertNotIn("gate-other", gr.session_text(self.tmp, []))
 
     def test_skill_with_disable_model_invocation_is_left_alone(self):
         skill(self.tmp, "manual-anim", "GSAP animation scroll motion helper.", dmi=True)
@@ -117,6 +137,33 @@ class TestSync(Base):
         skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
         gr.sync()
         self.assertEqual(gr.sync(), [])
+
+
+class TestClassify(unittest.TestCase):
+    REG = {"families": [
+        {"id": "a", "keywords": ["orm", "ui", "gsap", "scroll", "animat", "easing", "three"]},
+        {"id": "b", "keywords": ["performance", "latency", "react", "hooks"]},
+    ]}
+
+    def classify(self, folder, desc):
+        return gr.classify({"name": folder, "desc": desc, "path": Path(folder) / "SKILL.md"}, self.REG)
+
+    def test_keywords_match_whole_words_not_substrings(self):
+        # substring matching found "orm" in performance/platforms and "ui" in build/guide: a 2-2 tie
+        self.assertEqual(self.classify("tuner", "Performance tuning: build latency guide for platforms."), "b")
+
+    def test_stems_and_common_suffixes_still_match(self):
+        self.assertEqual(self.classify("x", "Animations with spring easing."), "a")
+        self.assertEqual(self.classify("threejs-lights", "Lighting with scroll."), "a")
+
+    def test_tie_is_broken_by_hits_in_the_name(self):
+        self.assertEqual(self.classify("gsap-scroll-kit", "Use with React hooks."), "a")
+
+    def test_tie_with_no_name_winner_is_none(self):
+        self.assertIsNone(self.classify("kit", "GSAP scroll with React hooks."))
+
+    def test_single_hit_is_not_enough(self):
+        self.assertIsNone(self.classify("kit", "Uses GSAP."))
 
 
 class TestManualGate(Base):
@@ -146,8 +193,9 @@ class TestManualGate(Base):
 
 class TestCheck(Base):
     def test_hidden_skill_without_family_is_an_orphan(self):
-        skill(self.tmp, "lonely", "Nothing to match here.")
+        skill(self.tmp, "lonely", "Nothing to match here.", dmi=True)  # dmi: sync leaves it out of every gate
         gr.sync()
+        skill(self.tmp, "lonely", "Nothing to match here.")  # now hidden by hand, behind greenroom's back
         (self.tmp / "settings.json").write_text(json.dumps({"skillOverrides": {**self.overrides(), "lonely": "user-invocable-only"}}), encoding="utf-8")
         _, orphans = gr.check()
         self.assertEqual(orphans, ["lonely"])
@@ -160,6 +208,33 @@ class TestCheck(Base):
         self.assertTrue(any("gate is hidden" in p for p in problems))
         gr.sync()  # sync makes the gate visible again
         self.assertNotIn("gate-motion", self.overrides())
+
+
+class TestDoubled(Base):
+    """A keep_visible skill that is also in a family costs context twice: in the listing and in its gate."""
+
+    def setUp(self):
+        super().setUp()
+        skill(self.tmp, "gsap-scroll", "Build GSAP scroll animations with ScrollTrigger and spring easing.")
+        skill(self.tmp, "manual-anim", "GSAP animation scroll motion helper.", dmi=True)
+        reg = self.registry()
+        reg["keep_visible"] = ["gsap-scroll", "manual-anim"]
+        fam = next(f for f in reg["families"] if f["id"] == "motion")
+        fam["skills"] = ["gsap-scroll", "manual-anim"]
+        (self.tmp / "greenroom" / "registry.json").write_text(json.dumps(reg), encoding="utf-8")
+        gr.sync()
+
+    def test_doubled_lists_model_invocable_overlap_and_skips_slash_only(self):
+        self.assertEqual(gr.doubled(self.registry(), gr.inventory()), [("gsap-scroll", "motion")])
+
+    def test_status_and_session_map_report_it(self):
+        _, out = self.cli(["status"])
+        self.assertIn("gsap-scroll (motion)", out)
+        self.assertNotIn("manual-anim (motion)", out)
+        self.assertIn("gsap-scroll (motion)", gr.session_text(self.tmp, []))
+
+    def test_doubled_is_advice_not_a_check_failure(self):
+        self.assertEqual(gr.check(), ([], []))
 
 
 class TestHooks(Base):

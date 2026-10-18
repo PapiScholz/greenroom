@@ -27,7 +27,7 @@ greenroom is one Python 3.9+ script using only the standard library, wired into 
 - No install step beyond `python install.py`; nothing to keep updated except the script itself.
 - greenroom depends on the hook payload format and the `skillOverrides` setting. A change in either breaks it, and the tests would not catch it because they simulate the payload.
 - `settings.json` is rewritten as 2-space JSON; content is preserved, formatting may change.
-- Classification is keyword-based and conservative: unclear skills stay visible and are listed as `pending`.
+- Classification is keyword-based and conservative: unclear skills stay visible and are listed as `pending`. (Superseded by ADR-0002: they are now hidden behind `gate-other`.)
 - The installed copy in `<claude dir>/greenroom/` must be refreshed by re-running `install.py` after pulling changes.
 
 ## Sources

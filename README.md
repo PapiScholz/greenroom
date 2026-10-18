@@ -49,7 +49,7 @@ flowchart TD
     O["You open a Claude Code session"] -->|SessionStart hook| S
     S["greenroom sync"] --> N{"What changed?"}
     N -->|"new skill, clear family"| H["Add it to its family<br/>and hide it: user-invocable-only<br/>(still in your / menu)"]
-    N -->|"new skill, no clear family"| P["Leave it visible<br/>and list it as pending"]
+    N -->|"new skill, no clear family"| P["Hide it behind gate-other<br/>and list it as pending"]
     N -->|"skill deleted"| R["Remove it from the registry"]
     N -->|nothing| K
     H --> G["Regenerate that family's gate"]
@@ -74,7 +74,7 @@ flowchart TD
    - which gates **this repo** needs.
 
    Stack detection reads `package.json`, config files (`wrangler.toml`, `playwright.config.ts`, `prisma/schema.prisma`…) and libraries loaded by CDN in single-file HTML sites.
-4. **Zero maintenance.** greenroom syncs at every session start and right after any `skills add/remove` or `plugin install/uninstall`. Each sync classifies new skills by keyword, hides them, lists them in their gate and prunes deleted ones. A skill with no clear family stays visible and the map flags it.
+4. **Zero maintenance.** greenroom syncs at every session start and right after any `skills add/remove` or `plugin install/uninstall`. Each sync classifies new skills by keyword, hides them, lists them in their gate and prunes deleted ones. A skill with no clear family is hidden behind `gate-other`, and the map flags it.
 5. **No orphans.** `check` fails when:
    - a hidden skill can't be reached through any gate;
    - a gate is hidden;
@@ -95,7 +95,7 @@ Measured on the author's machine (~300 skills), the skill listing went from ~30k
 | Measure whether greenroom works | `python ~/.claude/greenroom/greenroom.py usage [--since 2026-10-10 | --all] [--verbose] [--json]`. Reads the transcripts in `~/.claude/projects` line by line: interactive sessions and how many got the map (SDK sessions are shown apart), entries per gate and how many were followed by reading a hidden skill of that family, gates never used, hidden skills read (top 10) and never read per family, hidden skills you typed as `/name`, hidden skills delegated to a subagent, and reads in sessions that never entered their gate. Entering a gate is the `Skill` tool, `/gate`, reading the gate's `SKILL.md`, or typing `/name` of one of its hidden skills; subagent reads count in their parent session. Only local reads count: `Read`, or `cat`/`head`/`sed`/`Get-Content` on `~/.claude/skills/<name>/SKILL.md`. By default it counts from the install (the first session that opened with the map; the header says which); `--since` (UTC) sets another start, `--all` counts every transcript. Sessions that started before the start are left out. `--verbose` lists the never-read skills by name instead of a count per family. |
 | Find prompts where the model may have improvised | `usage` crosses `~/.claude/greenroom/prompts.jsonl` (written by the `UserPromptSubmit` hook: time, session, cwd and the gates whose keywords appear in the prompt, never the prompt itself) with the transcripts. For every prompt that matched a gate it checks whether the session entered that gate or read one of its skills before the next prompt, and lists the rest per gate with the keywords that fired, plus a sample of 10 to review by hand. They are candidates, not confirmed failures. One keyword is enough; it must start a word, and keywords of 3 letters or less must be the whole word. |
 | Move a skill to another family | Edit its family's `skills` list in `~/.claude/greenroom/registry.json`; the next sync applies it. |
-| Keep one of your own skills always visible | Add it to `keep_visible` in the registry. |
+| Keep one of your own skills always visible | Add it to `keep_visible` in the registry. If it is also in a family and the model can invoke it, `status` and the session map point out that it costs context twice. |
 | Place a skill flagged as `pending` | Add it to a family's `skills` list. |
 | Write a gate by hand | Set `"manual": true` on the family. greenroom stops overwriting its `SKILL.md` and writes `references/skills-added.md` next to it with any members your text doesn't mention yet. |
 | Undo everything | `python install.py --uninstall` |
@@ -127,19 +127,21 @@ Your skills are never touched.
 | Field | Meaning |
 |---|---|
 | `id`, `gate`, `title`, `summary` | Identity of the family and the name and description of its gate |
-| `keywords` | Used to classify new skills: at least 2 hits and a clear winner, otherwise `pending` |
+| `keywords` | Used to classify new skills. A keyword must start a word, and one of 3 letters or less must be the whole word. A skill needs at least 2 hits and a clear winner. On a tie, the family with more hits in the skill's name wins. Otherwise the skill goes to `pending`. |
 | `detect.deps`, `detect.files` | Stack signals that put the gate in "this repo uses…" |
 | `skills` | Members, filled in automatically |
 | `manual` | `true` if you wrote the gate yourself |
 
 `suggestions` makes the map recommend a skill when a git repo is missing some files. The example points at [repo-baseline](https://github.com/PapiScholz/repo-baseline): if `README.md`, `ARCHITECTURE.md` or `docs/adr` is missing, the model suggests it once. Repos that already have them get no extra line.
 
+`pending_gate` names the gate for skills with no family (default `gate-other`). It exists only while something is pending.
+
 `notes` holds extra lines for the session map, for example "Cloudflare tools come from the claude.ai connector, not the plugin" or "load the orchestration skill before spawning subagents".
 
 ## Limits
 
 - **Plugin skills** are not affected by `skillOverrides` ([docs](https://code.claude.com/docs/en/skills)). Manage them with `/plugin`, per project if needed (`enabledPlugins` in `<repo>/.claude/settings.json`). A gate can still read a disabled plugin's `SKILL.md` from the plugin cache.
-- **Classification** is keyword-based and conservative on purpose: when in doubt, the skill stays visible.
+- **Classification** is keyword-based and conservative on purpose: when in doubt, the skill goes to `gate-other` instead of a family that may be wrong ([ADR-0002](docs/adr/0002-whole-word-classification-and-a-gate-for-pending.md)).
 - **`settings.json` is rewritten** as 2-space JSON. Content is preserved; formatting may change.
 - **Project skills** (`<repo>/.claude/skills`) are not classified. Overrides apply by name, so hiding a user skill also hides a project skill with the same name.
 

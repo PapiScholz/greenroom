@@ -39,7 +39,7 @@ flowchart LR
 1. **Session start.** Claude Code calls `greenroom.py session` with the hook payload on stdin. `sync()` runs:
    - `inventory()` reads the frontmatter of every `<claude dir>/skills/*/SKILL.md`;
    - skills no longer installed are pruned from the registry;
-   - new skills are classified by keyword hits (`classify()`): at least 2 hits and a clear winner, otherwise they go to `pending` and stay visible;
+   - new skills are classified by keyword hits (`classify()`, same word rule as the prompt log in `keyword_pattern()`): at least 2 hits and a clear winner, a tie broken by hits in the name; otherwise they go to `pending`, hidden behind the generated `gate-other` (`pending_gate`), which is deleted once nothing is pending. Slash-only skills (`disable-model-invocation`) with no family are left out;
    - `build()` regenerates non-manual gates, sets members to `user-invocable-only`, keeps gates visible and converts any `"off"` to `user-invocable-only`. Every override it touches is recorded first in `state.json`.
 
    Then `session_text()` builds the map: gates, the one-line `RULES_LINE` (built from `SKILL_RULES`, the same constant every generated gate lists, so the two cannot drift), registry `notes`, the gates this repo needs (from `package.json` deps, config files and CDN scripts in `index.html`), file-based `suggestions`, maintenance notes and `check()` warnings. It is printed as `hookSpecificOutput.additionalContext`. If `sync()` raises, the map is still printed with the error.
@@ -70,3 +70,4 @@ None. greenroom only reads and writes files under `<claude dir>`. It depends on 
 ## Decisions
 
 - [ADR-0001: Ship greenroom as a stdlib-only Python script driven by Claude Code hooks](docs/adr/0001-stdlib-python-script-driven-by-hooks.md)
+- [ADR-0002: Classify by whole words and hide unclassified skills behind their own gate](docs/adr/0002-whole-word-classification-and-a-gate-for-pending.md)
