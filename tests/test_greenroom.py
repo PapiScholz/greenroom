@@ -591,6 +591,37 @@ class TestUninstall(Base):
         self.assertNotIn("greenroom.py", json.dumps(settings))
         self.assertEqual(settings["hooks"]["UserPromptSubmit"], [foreign])
 
+    def test_hooks_use_the_python_alias_that_survives_upgrades(self):
+        # 2026-11: sys.executable pointed into pythoncore-3.14-64; after 3.15 replaced it every hook failed silently.
+        alias = self.tmp / "Python" / "bin" / "python.exe"
+        alias.parent.mkdir(parents=True)
+        alias.write_text("", encoding="utf-8")
+        env = {"LOCALAPPDATA": str(self.tmp)}
+        self.assertEqual(install.python_exe(env, windows=True), str(alias))
+        self.assertEqual(install.python_exe(env, windows=False), sys.executable)
+        self.assertEqual(install.python_exe({"LOCALAPPDATA": str(self.tmp / "none")}, windows=True), sys.executable)
+        self.assertEqual(install.python_exe({}, windows=True), sys.executable)
+
+    def test_reinstall_rewrites_a_hook_that_points_to_a_python_that_no_longer_exists(self):
+        script = install.gr.paths()["data"] / "greenroom.py"
+        stale = f'"C:\\Users\\x\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe" -X utf8 "{script}" posttool'
+        settings = {"hooks": {"PostToolUse": [{"matcher": "Bash|PowerShell", "hooks": [{"type": "command", "command": stale, "timeout": 30}]}]}}
+        install.add_hooks(settings)
+        cmds = [h["command"] for g in settings["hooks"]["PostToolUse"] for h in g["hooks"] if "greenroom.py" in h["command"]]
+        self.assertEqual(cmds, [install.hook_cmd("posttool")])
+        self.assertNotIn("pythoncore-3.14", json.dumps(settings))
+
+    def test_reinstall_leaves_alone_a_hook_that_only_mentions_greenroom(self):
+        script = install.gr.paths()["data"] / "greenroom.py"
+        mine = [
+            f'"C:\\old\\python.exe" -X utf8 "{script}" posttool 2>nul',
+            f'pwsh -File wrap.ps1 "{script}" posttool',
+            '"C:\\old\\python.exe" -X utf8 "D:\\elsewhere\\greenroom.py" posttool',
+        ]
+        settings = {"hooks": {"PostToolUse": [{"hooks": [{"type": "command", "command": c} for c in mine]}]}}
+        install.add_hooks(settings)
+        self.assertEqual([h["command"] for h in settings["hooks"]["PostToolUse"][0]["hooks"]], mine)
+
 
 class TestInstallBackup(Base):
     def run_install(self):

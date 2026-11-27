@@ -29,6 +29,7 @@ greenroom is one Python 3.9+ script using only the standard library, wired into 
 - `settings.json` is rewritten as 2-space JSON; content is preserved, formatting may change.
 - Classification is keyword-based and conservative: unclear skills stay visible and are listed as `pending`. (Superseded by ADR-0002: they are now hidden behind `gate-other`.)
 - The installed copy in `<claude dir>/greenroom/` must be refreshed by re-running `install.py` after pulling changes.
+- The hook commands carry an absolute Python path. `sys.executable` included the version (`pythoncore-3.14-64`) and every hook failed silently once 3.15 replaced it (2026-11), so they use the install manager's stable alias when present, and a reinstall rewrites the hooks in the exact shape it writes.
 
 ## Sources
 

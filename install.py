@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import time
@@ -23,9 +24,22 @@ sys.path.insert(0, str(HERE))
 import greenroom as gr  # noqa: E402
 
 
+def python_exe(env: dict | None = None, windows: bool = os.name == "nt") -> str:
+    """The Python the hooks call. sys.executable is the exact install, version included (pythoncore-3.14-64 on the
+    Python install manager): when 3.15 replaced it, every hook failed on each call without saying so (2026-11). The
+    manager's alias in %LOCALAPPDATA%\\Python\\bin survives upgrades, so it wins when it exists."""
+    env = os.environ if env is None else env
+    base = env.get("LOCALAPPDATA")
+    alias = Path(base) / "Python" / "bin" / "python.exe" if base else None
+    return str(alias) if windows and alias and alias.is_file() else sys.executable
+
+
+HOOK_SUBS = ("session", "posttool", "prompt")
+
+
 def hook_cmd(sub: str) -> str:
     script = gr.paths()["data"] / "greenroom.py"
-    return f'"{sys.executable}" -X utf8 "{script}" {sub}'
+    return f'"{python_exe()}" -X utf8 "{script}" {sub}'
 
 
 def settings_snapshot() -> str | None:
@@ -63,6 +77,16 @@ def add_hooks(settings: dict) -> None:
     up = hooks.setdefault("UserPromptSubmit", [])
     if not has_hook(up, "greenroom.py"):
         up.append({"hooks": [{"type": "command", "command": hook_cmd("prompt"), "timeout": 5}]})
+    # A reinstall also refreshes the hooks already there: one written with a Python that no longer exists fails on
+    # every call, and only a rewrite fixes it. Only the exact shape this installer writes is touched: a wrapper or a
+    # hand-edited command that merely mentions greenroom.py is the user's.
+    script = f'"{gr.paths()["data"] / "greenroom.py"}"'
+    for groups in (ss, pt, up):
+        for g in groups:
+            for h in g.get("hooks", []):
+                parts = h.get("command", "").rsplit(" ", 2)
+                if len(parts) == 3 and parts[1] == script and parts[2] in HOOK_SUBS and parts[0].endswith(' -X utf8'):
+                    h["command"] = hook_cmd(parts[2])
 
 
 def remove_hooks(settings: dict) -> None:

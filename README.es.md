@@ -113,6 +113,8 @@ Requiere Python 3.9+ y Claude Code. Respeta `$CLAUDE_CONFIG_DIR`.
 
 `--yes` saltea la confirmación.
 
+Los hooks llaman al alias del instalador de Python (`%LOCALAPPDATA%\Python\bin\python.exe`) cuando existe, así una actualización de Python no los rompe; si no, al Python que corrió `install.py`. Si los hooks dejaron de andar después de quitar un Python, volvé a correr `python install.py`: reescribe los hooks que escribió él para que apunten al Python actual, y no toca los que editaste a mano.
+
 `--uninstall` revierte la instalación:
 - restaura cada override que greenroom cambió (guarda el valor anterior de cada uno en `state.json`);
 - quita los hooks;
